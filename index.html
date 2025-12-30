@@ -39,6 +39,7 @@
       font-size:16px;
       cursor:pointer;
     }
+    .link{color:#4CAF50;cursor:pointer;}
     .hidden{display:none;}
   </style>
 </head>
@@ -57,14 +58,23 @@
   <!-- Login -->
   <section id="login" class="hidden">
     <h2>Login</h2>
-
-    <input id="email" type="email" placeholder="Email">
-    <input id="password" type="password" placeholder="Password">
-
+    <input id="loginEmail" type="email" placeholder="Email">
+    <input id="loginPass" type="password" placeholder="Password">
     <button onclick="login()">Login</button>
+    <p class="link" onclick="showRegister()">Create an Account</p>
     <button onclick="goBack()">Back</button>
-
     <p id="loginMsg"></p>
+  </section>
+
+  <!-- Register -->
+  <section id="register" class="hidden">
+    <h2>Create Account</h2>
+    <input id="regEmail" type="email" placeholder="Email">
+    <input id="regPass" type="password" placeholder="Password">
+    <button onclick="register()">Register</button>
+    <p class="link" onclick="showLogin()">Already have an account? Login</p>
+    <button onclick="goBack()">Back</button>
+    <p id="regMsg"></p>
   </section>
 
   <!-- Dashboard -->
@@ -76,12 +86,11 @@
 
 </div>
 
-<!-- 🔥 USE FIREBASE v8 (NOT v9 / v10) -->
+<!-- Firebase v8 -->
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
 
 <script>
-  // ===== Firebase Config =====
   var firebaseConfig = {
     apiKey: "AIzaSyA7Tck7VFnldXnKj9fMpPc9bSWqgVQA8jU",
     authDomain: "bottlereward.firebaseapp.com",
@@ -92,44 +101,59 @@
   firebase.initializeApp(firebaseConfig);
   var auth = firebase.auth();
 
-  let landing = document.getElementById("landing");
-  let loginBox = document.getElementById("login");
-  let dashboard = document.getElementById("dashboard");
+  let landing=document.getElementById("landing");
+  let loginBox=document.getElementById("login");
+  let regBox=document.getElementById("register");
+  let dashboard=document.getElementById("dashboard");
 
-  window.showLogin = function(){
+  window.showLogin=function(){
     landing.classList.add("hidden");
+    regBox.classList.add("hidden");
     loginBox.classList.remove("hidden");
   }
 
-  window.goBack = function(){
+  window.showRegister=function(){
     loginBox.classList.add("hidden");
+    regBox.classList.remove("hidden");
+  }
+
+  window.goBack=function(){
+    loginBox.classList.add("hidden");
+    regBox.classList.add("hidden");
     landing.classList.remove("hidden");
   }
 
-  window.login = function(){
-    let email = document.getElementById("email").value;
-    let pass = document.getElementById("password").value;
-    let msg = document.getElementById("loginMsg");
+  window.login=function(){
+    let email=document.getElementById("loginEmail").value;
+    let pass=document.getElementById("loginPass").value;
+    let msg=document.getElementById("loginMsg");
 
-    auth.signInWithEmailAndPassword(email, pass)
-    .then(()=>{
-      msg.innerText = "Login success 🎉";
-    })
-    .catch(err=>{
-      msg.innerText = err.message;
-    });
+    auth.signInWithEmailAndPassword(email,pass)
+    .then(()=> msg.innerText="Login success 🎉")
+    .catch(e=> msg.innerText=e.message);
   }
 
-  auth.onAuthStateChanged((user)=>{
+  window.register=function(){
+    let email=document.getElementById("regEmail").value;
+    let pass=document.getElementById("regPass").value;
+    let msg=document.getElementById("regMsg");
+
+    auth.createUserWithEmailAndPassword(email,pass)
+    .then(()=> msg.innerText="Account created 🎉 Now Login")
+    .catch(e=> msg.innerText=e.message);
+  }
+
+  auth.onAuthStateChanged(user=>{
     if(user){
       landing.classList.add("hidden");
       loginBox.classList.add("hidden");
+      regBox.classList.add("hidden");
       dashboard.classList.remove("hidden");
-      document.getElementById("userEmail").innerText = user.email;
+      document.getElementById("userEmail").innerText=user.email;
     }
   });
 
-  window.logout = function(){
+  window.logout=function(){
     auth.signOut();
     dashboard.classList.add("hidden");
     landing.classList.remove("hidden");
