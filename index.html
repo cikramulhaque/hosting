@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Bottle Rewards MVP</title>
+  <link rel="stylesheet" href="style.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+
+<body>
+
+<div id="app">
+
+  <!-- Landing -->
+  <section id="landing">
+    <h1>♻ Bottle Rewards</h1>
+    <p>Earn rewards by recycling plastic bottles</p>
+    <button onclick="showLogin()">Get Started</button>
+  </section>
+
+  <!-- Login -->
+  <section id="login" class="hidden">
+    <h2>Login</h2>
+
+    <input id="email" type="email" placeholder="Email">
+    <input id="password" type="password" placeholder="Password">
+
+    <button onclick="login()">Login</button>
+    <button onclick="goBack()">Back</button>
+
+    <p id="loginMsg"></p>
+  </section>
+
+  <!-- Dashboard -->
+  <section id="dashboard" class="hidden">
+    <h2>Welcome 🎉</h2>
+    <p id="userEmail"></p>
+
+    <button onclick="logout()">Logout</button>
+  </section>
+
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js"></script>
+<script src="app.js"></script>
+
+</body>
+</html>
