@@ -52,21 +52,10 @@
   <section id="landing">
     <h1>♻ Bottle Rewards</h1>
     <p>Earn rewards by recycling plastic bottles</p>
-    <button onclick="showLogin()">Get Started</button>
+    <button onclick="showRegister()">Get Started</button>
   </section>
 
-  <!-- Login -->
-  <section id="login" class="hidden">
-    <h2>Login</h2>
-    <input id="loginEmail" type="email" placeholder="Email">
-    <input id="loginPass" type="password" placeholder="Password">
-    <button onclick="login()">Login</button>
-    <p class="link" onclick="showRegister()">Create an Account</p>
-    <button onclick="goBack()">Back</button>
-    <p id="loginMsg"></p>
-  </section>
-
-  <!-- Register -->
+  <!-- Register FIRST -->
   <section id="register" class="hidden">
     <h2>Create Account</h2>
     <input id="regEmail" type="email" placeholder="Email">
@@ -75,6 +64,17 @@
     <p class="link" onclick="showLogin()">Already have an account? Login</p>
     <button onclick="goBack()">Back</button>
     <p id="regMsg"></p>
+  </section>
+
+  <!-- Login -->
+  <section id="login" class="hidden">
+    <h2>Login</h2>
+    <input id="loginEmail" type="email" placeholder="Email">
+    <input id="loginPass" type="password" placeholder="Password">
+    <button onclick="login()">Login</button>
+    <p class="link" onclick="showRegister()">Create Account</p>
+    <button onclick="goBack()">Back</button>
+    <p id="loginMsg"></p>
   </section>
 
   <!-- Dashboard -->
@@ -99,38 +99,28 @@
   };
 
   firebase.initializeApp(firebaseConfig);
-  var auth = firebase.auth();
+  var auth=firebase.auth();
 
   let landing=document.getElementById("landing");
   let loginBox=document.getElementById("login");
   let regBox=document.getElementById("register");
   let dashboard=document.getElementById("dashboard");
 
-  window.showLogin=function(){
-    landing.classList.add("hidden");
-    regBox.classList.add("hidden");
-    loginBox.classList.remove("hidden");
-  }
-
   window.showRegister=function(){
+    landing.classList.add("hidden");
     loginBox.classList.add("hidden");
     regBox.classList.remove("hidden");
   }
 
-  window.goBack=function(){
-    loginBox.classList.add("hidden");
+  window.showLogin=function(){
     regBox.classList.add("hidden");
-    landing.classList.remove("hidden");
+    loginBox.classList.remove("hidden");
   }
 
-  window.login=function(){
-    let email=document.getElementById("loginEmail").value;
-    let pass=document.getElementById("loginPass").value;
-    let msg=document.getElementById("loginMsg");
-
-    auth.signInWithEmailAndPassword(email,pass)
-    .then(()=> msg.innerText="Login success 🎉")
-    .catch(e=> msg.innerText=e.message);
+  window.goBack=function(){
+    regBox.classList.add("hidden");
+    loginBox.classList.add("hidden");
+    landing.classList.remove("hidden");
   }
 
   window.register=function(){
@@ -140,6 +130,16 @@
 
     auth.createUserWithEmailAndPassword(email,pass)
     .then(()=> msg.innerText="Account created 🎉 Now Login")
+    .catch(e=> msg.innerText=e.message);
+  }
+
+  window.login=function(){
+    let email=document.getElementById("loginEmail").value;
+    let pass=document.getElementById("loginPass").value;
+    let msg=document.getElementById("loginMsg");
+
+    auth.signInWithEmailAndPassword(email,pass)
+    .then(()=> msg.innerText="Login Success 🎉")
     .catch(e=> msg.innerText=e.message);
   }
 
