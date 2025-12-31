@@ -59,6 +59,8 @@ button{
   cursor:pointer;
 }
 .message{text-align:center;margin-top:10px;}
+.error{color:#ff4b4b;}
+.success{color:#00ff6a;}
 </style>
 </head>
 
@@ -82,6 +84,7 @@ button{
     <span class="toggle-eye" onclick="toggle('cpass')">👁</span>
     <button onclick="customerLogin()">Login</button>
     <div class="linkBtn" onclick="showRegister()">Create Account</div>
+    <div class="linkBtn" onclick="forgotPassword()">Forgot Password?</div>
   </div>
 
   <!-- REGISTER -->
@@ -91,6 +94,11 @@ button{
     <div style="position:relative;">
       <input id="rpass" type="password" placeholder="Password">
       <span class="toggle-eye" onclick="toggle('rpass')">👁</span>
+    </div>
+
+    <div style="position:relative;">
+      <input id="rcpass" type="password" placeholder="Confirm Password">
+      <span class="toggle-eye" onclick="toggle('rcpass')">👁</span>
     </div>
 
     <button onclick="registerUser()">Register</button>
@@ -116,6 +124,7 @@ import {
   getAuth, 
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword,
+  sendPasswordResetEmail,
   signOut
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
@@ -141,12 +150,19 @@ const db = getFirestore();
 const msg = document.getElementById("msg");
 
 
-// REGISTER USER
+// REGISTER USER (with confirm password)
 window.registerUser = function(){
+ const email=document.getElementById("remail").value;
+ const pass=document.getElementById("rpass").value;
+ const cpass=document.getElementById("rcpass").value;
+
+ if(pass!==cpass){
+   msg.innerHTML="<span class='error'>Passwords do not match ❌</span>";
+   return;
+ }
+
  msg.innerHTML="Creating Account...";
- createUserWithEmailAndPassword(auth,
- document.getElementById("remail").value,
- document.getElementById("rpass").value)
+ createUserWithEmailAndPassword(auth,email,pass)
  .then(async (u)=>{
   await setDoc(doc(db,"users",u.user.email),{
     email:u.user.email,
@@ -154,7 +170,7 @@ window.registerUser = function(){
     bottles:0,
     history:[]
   });
-  msg.innerHTML="Account Created ✔ Login Now";
+  msg.innerHTML="<span class='success'>Account Created ✔ Login Now</span>";
   showCustomer();
  })
  .catch(e=>msg.innerHTML=e.message);
@@ -168,10 +184,27 @@ window.customerLogin = function(){
     document.getElementById("cemail").value,
     document.getElementById("cpass").value)
   .then(()=>{
-    msg.innerHTML="Login Success ✔ Redirecting…";
+    msg.innerHTML="<span class='success'>Login Success ✔ Redirecting…</span>";
     setTimeout(()=>location="transfer.html",1200);
   })
   .catch(e=>msg.innerHTML=e.message);
+}
+
+
+// FORGOT PASSWORD
+window.forgotPassword = function(){
+ const email=document.getElementById("cemail").value;
+
+ if(!email){
+   msg.innerHTML="<span class='error'>Enter your email first ❌</span>";
+   return;
+ }
+
+ sendPasswordResetEmail(auth,email)
+ .then(()=>{
+   msg.innerHTML="<span class='success'>Reset email sent ✔ Check inbox</span>";
+ })
+ .catch(e=>msg.innerHTML=e.message);
 }
 
 
@@ -194,7 +227,7 @@ window.storeLogin = async function(){
       return;
    }
 
-   msg.innerHTML="Store Verified ✔ Redirecting...";
+   msg.innerHTML="<span class='success'>Store Verified ✔ Redirecting...</span>";
    setTimeout(()=>location="store.html",1200);
  }
  catch(e){
@@ -210,7 +243,6 @@ function toggleMenu(){
  m.style.display = m.style.display==="block"?"none":"block";
 }
 
-// ALWAYS CLOSE MENU WHEN SWITCHING
 function closeMenu(){
  document.getElementById("menuDrop").style.display="none";
 }
