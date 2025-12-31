@@ -1,21 +1,29 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>Store Panel - Bottle Rewards</title>
+<title>Bottle Rewards Portal</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
 body{
   background:#0b132b;
   color:white;
-  font-family:Arial;
   text-align:center;
+  font-family:Arial;
 }
 .card{
   background:#1c2541;
   padding:20px;
-  border-radius:15px;
   width:340px;
   margin:20px auto;
+  border-radius:15px;
+}
+button{
+  background:#5bc0be;
+  border:none;
+  padding:10px;
+  border-radius:10px;
+  margin-top:10px;
+  cursor:pointer;
 }
 input{
   width:90%;
@@ -24,49 +32,53 @@ input{
   border:none;
   margin:5px;
 }
-button{
-  background:#5bc0be;
-  padding:10px;
-  border:none;
-  border-radius:10px;
-  margin-top:10px;
-  cursor:pointer;
-}
-.txn{
+.tabBtn{
   background:#3a506b;
-  padding:10px;
-  border-radius:10px;
-  margin-top:8px;
+  margin:5px;
 }
 </style>
 </head>
 
 <body>
 
-<h1>Store Panel</h1>
+<h1>Bottle Rewards Portal</h1>
 
-<div id="loginBox" class="card">
-  <h3>Store Login</h3>
-  <input id="email" placeholder="Store Email">
-  <input id="pass" type="password" placeholder="Password">
-  <button onclick="login()">Login</button>
-  <p id="msg"></p>
+<!-- SWITCH TABS -->
+<button class="tabBtn" onclick="showCustomer()">Customer Login</button>
+<button class="tabBtn" onclick="showStore()">Store Login</button>
+
+<!-- CUSTOMER LOGIN -->
+<div id="customerBox" class="card">
+  <h2>Customer Login</h2>
+  <p>Login to use your points</p>
+  <button id="customerLogin">Login with Google</button>
+  <p id="cmsg"></p>
 </div>
 
+<!-- STORE LOGIN -->
 <div id="storeBox" class="card" style="display:none">
-  <h2 id="storeName"></h2>
-  <button onclick="logout()">Logout</button>
+  <h2>Store Login</h2>
 
-  <h3>Transactions</h3>
-  <div id="list"></div>
+  <input id="email" placeholder="Store Email">
+
+  <!-- Password + Eye Button -->
+  <div style="display:flex;align-items:center;justify-content:center;gap:6px;">
+    <input id="pass" type="password" placeholder="Password" style="width:75%;">
+    <button type="button" onclick="togglePass()" style="padding:8px;border-radius:8px;">
+      👁️
+    </button>
+  </div>
+
+  <button onclick="storeLogin()">Login</button>
+  <p id="smsg"></p>
 </div>
+
 
 <script type="module">
+
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getAuth, signInWithEmailAndPassword, signOut } 
+import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithEmailAndPassword } 
 from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { getFirestore, doc, getDoc } 
-from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "YOUR_KEY",
@@ -76,63 +88,57 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth();
-const db = getFirestore();
 
-const loginBox = document.getElementById("loginBox");
-const storeBox = document.getElementById("storeBox");
-const storeName = document.getElementById("storeName");
-const list = document.getElementById("list");
-const msg = document.getElementById("msg");
+const cmsg = document.getElementById("cmsg");
+const smsg = document.getElementById("smsg");
 
-window.login = async function(){
+// SWITCH FUNCTIONS
+window.showCustomer = function(){
+  document.getElementById("customerBox").style.display="block";
+  document.getElementById("storeBox").style.display="none";
+}
+
+window.showStore = function(){
+  document.getElementById("customerBox").style.display="none";
+  document.getElementById("storeBox").style.display="block";
+}
+
+// TOGGLE PASSWORD EYE BUTTON
+window.togglePass = function(){
+  const p = document.getElementById("pass");
+  p.type = (p.type === "password") ? "text" : "password";
+}
+
+// CUSTOMER LOGIN (Google)
+document.getElementById("customerLogin").onclick = async ()=>{
+  try{
+    const provider = new GoogleAuthProvider();
+    await signInWithPopup(auth, provider);
+    cmsg.innerHTML = "Login Success ✔ Redirecting...";
+    
+    // redirect user to transfer page
+    window.location.href = "transfer.html"; 
+  }catch(e){
+    cmsg.innerHTML = e.message;
+  }
+}
+
+// STORE LOGIN
+window.storeLogin = async function(){
   let email = document.getElementById("email").value;
   let pass = document.getElementById("pass").value;
 
   try{
     await signInWithEmailAndPassword(auth,email,pass);
-    loadStore(email);
+    smsg.innerHTML = "Login Success ✔ Redirecting...";
+    
+    // redirect store to store dashboard
+    window.location.href = "store.html";
   }catch(e){
-    msg.innerHTML = e.message;
+    smsg.innerHTML = e.message;
   }
 }
 
-async function loadStore(email){
-  const ref = doc(db,"stores",email);
-  const snap = await getDoc(ref);
-
-  if(!snap.exists()){
-    alert("Store not found in database");
-    return;
-  }
-
-  const data = snap.data();
-  storeName.innerHTML = data.name || "Store";
-
-  list.innerHTML = "";
-
-  if(!data.transactions || data.transactions.length === 0){
-    list.innerHTML = "<p>No transactions yet</p>";
-  } else {
-    data.transactions.forEach(t=>{
-      list.innerHTML += `
-        <div class='txn'>
-          <p>User: ${t.user}</p>
-          <p>Points: ${t.points}</p>
-          <p>Time: ${t.time}</p>
-        </div>
-      `;
-    });
-  }
-
-  loginBox.style.display="none";
-  storeBox.style.display="block";
-}
-
-window.logout = function(){
-  signOut(auth);
-  storeBox.style.display="none";
-  loginBox.style.display="block";
-}
 </script>
 
 </body>
