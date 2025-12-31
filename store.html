@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <title>Store Panel</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
+
 <style>
 body{
  background:#0d0d0d;
@@ -21,9 +22,13 @@ body{
 }
 .card{
  background:#1d1d1d;
- padding:10px;
+ padding:12px;
  margin:10px 0;
  border-radius:8px;
+ cursor:pointer;
+}
+.card:hover{
+ background:#2b2b2b;
 }
 button{
  background:#ff5252;
@@ -34,17 +39,21 @@ button{
  color:white;
  margin-top:10px;
 }
-.error{
- color:#ff4b4b;
+.refunded{
+ color:#00ff6a;
+ font-weight:bold;
 }
+.error{color:#ff4b4b;}
+.success{color:#00ff6a;}
 </style>
 </head>
+
 <body>
 
 <div class="container">
 <h2>Store Panel</h2>
 
-<div id="status" class="error"></div>
+<div id="status"></div>
 
 <div>Email: <span id="email"></span></div>
 <button onclick="logout()">Logout</button>
@@ -52,6 +61,7 @@ button{
 <h3>Transactions</h3>
 <div id="list"></div>
 </div>
+
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
@@ -64,8 +74,11 @@ import {
 import { 
   getFirestore, 
   doc, 
-  getDoc 
+  getDoc,
+  updateDoc,
+  arrayUnion
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
 
 const firebaseConfig = {
   apiKey: "AIzaSyA7Tck7VFnldXnKj9fMpPc9bSWqgVQA8jU",
@@ -82,7 +95,9 @@ const db = getFirestore();
 
 const list=document.getElementById("list");
 const status=document.getElementById("status");
+let storeEmail="";
 
+// ---------- AUTH ----------
 onAuthStateChanged(auth, async (user)=>{
  if(!user){
    location="index.html";
@@ -90,22 +105,28 @@ onAuthStateChanged(auth, async (user)=>{
  }
 
  document.getElementById("email").innerText=user.email;
+ storeEmail=user.email;
 
- // 🔐 Check if this email exists in stores collection
- const ref = doc(db,"stores",user.email);
+ const ref = doc(db,"stores",storeEmail);
  const snap = await getDoc(ref);
 
  if(!snap.exists()){
-   status.innerHTML="❌ Access Denied — You are NOT a registered store";
+   status.innerHTML="❌ Access Denied — Not a Store";
    await signOut(auth);
    setTimeout(()=>location="index.html",1500);
    return;
  }
 
- loadTransactions(snap.data());
+ loadTransactions();
 });
 
-function loadTransactions(data){
+
+// ---------- LOAD TRANSACTIONS ----------
+async function loadTransactions(){
+ const ref = doc(db,"stores",storeEmail);
+ const snap = await getDoc(ref);
+ const data=snap.data();
+
  if(!data.transactions || data.transactions.length===0){
   list.innerHTML="No transactions yet";
   return;
@@ -113,22 +134,76 @@ function loadTransactions(data){
 
  list.innerHTML="";
 
- data.transactions.slice().reverse().forEach(t=>{
-  const div=document.createElement("div");
-  div.className="card";
+ data.transactions.slice().reverse().forEach((t,index)=>{
+
+  let card=document.createElement("div");
+  card.className="card";
 
   let time="Unknown";
   if(t.time?.seconds) time = new Date(t.time.seconds*1000).toLocaleString();
   else time = new Date(t.time).toLocaleString();
 
-  div.innerHTML=
+  card.innerHTML=
    `<b>Customer:</b> ${t.user}<br>
     <b>Points:</b> ${t.points}<br>
-    <b>Time:</b> ${time}`;
-  list.appendChild(div);
+    <b>Time:</b> ${time}<br>
+    ${t.refunded?'<span class="refunded">✔ REFUNDED</span>':'<span>Tap to refund</span>'}`;
+
+  if(!t.refunded){
+   card.onclick = ()=> refundTransaction(t);
+  }
+
+  list.appendChild(card);
  });
 }
 
+
+// ---------- REFUND ----------
+async function refundTransaction(t){
+ if(!confirm("Refund this transaction? Points will return to user.")) return;
+
+ const userRef = doc(db,"users",t.user);
+ const userSnap = await getDoc(userRef);
+
+ if(!userSnap.exists()){
+   alert("User no longer exists. Cannot refund.");
+   return;
+ }
+
+ let userData=userSnap.data();
+
+ // 1️⃣ Credit back to USER
+ await updateDoc(userRef,{
+  points:(userData.points||0)+t.points,
+  history:arrayUnion({
+   type:"Refund from Store",
+   peer:storeEmail,
+   points:t.points,
+   time:new Date()
+  })
+ });
+
+ // 2️⃣ Mark refunded in STORE
+ const storeRef = doc(db,"stores",storeEmail);
+ const storeData = (await getDoc(storeRef)).data();
+
+ let updated = storeData.transactions.map(tr=>{
+  if(tr.user===t.user && tr.points===t.points && !tr.refunded){
+    return {...tr, refunded:true};
+  }
+  return tr;
+ });
+
+ await updateDoc(storeRef,{
+  transactions:updated
+ });
+
+ status.innerHTML="<span class='success'>Refunded Successfully ✔</span>";
+ loadTransactions();
+}
+
+
+// ---------- LOGOUT ----------
 window.logout=function(){
  signOut(auth).then(()=>location="index.html");
 }
