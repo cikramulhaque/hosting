@@ -2,17 +2,19 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Transfer Points</title>
+<title>Transfer & Wallet</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
 body{background:#0d0d0d;color:white;font-family:Arial;margin:0;padding:20px;}
-.container{max-width:450px;margin:auto;background:#121212;padding:20px;border-radius:10px;}
+.container{max-width:500px;margin:auto;background:#121212;padding:20px;border-radius:10px;}
+.card{margin:10px 0;}
+.box{background:#1c1c1c;padding:10px;border-radius:8px;margin-top:12px;}
 input{width:100%;padding:10px;margin:8px 0;border-radius:5px;border:none;}
 button{width:100%;padding:10px;margin-top:10px;border-radius:5px;border:none;font-size:16px;}
-.sendBtn{background:#00c853;color:white;}
-.logoutBtn{background:#ff5252;color:white;margin-top:15px;}
-.card{margin:10px 0;}
-.historyBox{background:#1c1c1c;padding:10px;border-radius:5px;margin-top:10px;}
+.btnGreen{background:#00c853;color:white;}
+.btnBlue{background:#2196F3;color:white;}
+.btnRed{background:#ff5252;color:white;}
+.historyBox{background:#1f1f1f;padding:10px;border-radius:5px;margin-top:10px;}
 .success{color:#00ff6a;}
 .error{color:#ff4b4b;}
 </style>
@@ -20,17 +22,36 @@ button{width:100%;padding:10px;margin-top:10px;border-radius:5px;border:none;fon
 <body>
 
 <div class="container">
-<h2>Customer Panel</h2>
+<h2>Customer Wallet</h2>
 
 <div class="card">Email: <span id="email"></span></div>
 <div class="card">Points: <span id="points">0</span></div>
 <div class="card">Bottles: <span id="bottles">0</span></div>
 
+<!-- SEND TO STORE -->
+<div class="box">
+<h3>Send Points to Store</h3>
 <input id="storeId" placeholder="Store Email">
-<input id="amount" type="number" placeholder="Points to Send">
-<button class="sendBtn" onclick="sendPoints()">SEND</button>
+<input id="storeAmount" type="number" placeholder="Points">
+<button class="btnGreen" onclick="sendToStore()">Send to Store</button>
+</div>
 
-<button class="logoutBtn" onclick="logout()">LOGOUT</button>
+<!-- SEND TO USER -->
+<div class="box">
+<h3>Send Points to User</h3>
+<input id="userId" placeholder="User Email">
+<input id="userAmount" type="number" placeholder="Points">
+<button class="btnBlue" onclick="sendToUser()">Send to User</button>
+</div>
+
+<!-- CREDIT BALANCE -->
+<div class="box">
+<h3>Credit My Wallet</h3>
+<input id="creditAmount" type="number" placeholder="Points to Credit">
+<button class="btnGreen" onclick="creditPoints()">Credit Balance</button>
+</div>
+
+<button class="btnRed" onclick="logout()">Logout</button>
 
 <p id="msg"></p>
 
@@ -42,12 +63,12 @@ button{width:100%;padding:10px;margin-top:10px;border-radius:5px;border:none;fon
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { 
-  getFirestore, 
-  doc, 
-  getDoc, 
-  updateDoc, 
-  setDoc, 
-  arrayUnion 
+  getFirestore,
+  doc,
+  getDoc,
+  updateDoc,
+  setDoc,
+  arrayUnion
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -67,100 +88,148 @@ const msg=document.getElementById("msg");
 let userEmail="";
 let userDocRef;
 
-// ---------- AUTH STATE ----------
+// ---------- AUTH ----------
 onAuthStateChanged(auth, async (user)=>{
  if(!user) location="index.html";
  userEmail=user.email;
  document.getElementById("email").innerText=userEmail;
-
  userDocRef = doc(db,"users",userEmail);
  loadUser();
 });
 
-// ---------- LOAD USER ----------
+// ---------- LOAD ----------
 async function loadUser(){
- let snap = await getDoc(userDocRef);
+ let snap=await getDoc(userDocRef);
  if(!snap.exists()) return;
-
- let data = snap.data();
- document.getElementById("points").innerText=data.points || 0;
- document.getElementById("bottles").innerText=data.bottles || 0;
-
+ let data=snap.data();
+ document.getElementById("points").innerText=data.points||0;
+ document.getElementById("bottles").innerText=data.bottles||0;
  loadHistory(data);
 }
 
-// ---------- TIME FORMAT ----------
 function formatTime(t){
  if(t?.seconds) return new Date(t.seconds * 1000).toLocaleString();
- if(typeof t === "string" || typeof t === "number") return new Date(t).toLocaleString();
- if(t instanceof Date) return t.toLocaleString();
- return "Unknown Time";
+ return new Date(t).toLocaleString();
 }
 
-// ---------- LOAD HISTORY ----------
 function loadHistory(data){
  const box=document.getElementById("history");
  box.innerHTML="";
- if(!data.history || data.history.length==0){
+ if(!data.history||data.history.length==0){
   box.innerHTML="No transactions yet";
   return;
  }
+
  data.history.slice().reverse().forEach(t=>{
-  let d=document.createElement("div");
-  d.className="historyBox";
-  d.innerHTML=`Store: ${t.store}<br>Points: ${t.points}<br>Time: ${formatTime(t.time)}`;
-  box.appendChild(d);
+  let div=document.createElement("div");
+  div.className="historyBox";
+  div.innerHTML=
+   `<b>Type:</b> ${t.type}<br>
+    <b>To/From:</b> ${t.peer}<br>
+    <b>Points:</b> ${t.points}<br>
+    <b>Time:</b> ${formatTime(t.time)}`;
+  box.appendChild(div);
  });
 }
 
-// ---------- SEND POINTS ----------
-window.sendPoints = async function(){
+// ---------- SEND TO STORE ----------
+window.sendToStore = async function(){
  msg.innerHTML="Processing...";
+ let live = (await getDoc(userDocRef)).data();
+ let balance = Number(live.points||0);
+ let pts = Number(document.getElementById("storeAmount").value);
+ let storeEmail=document.getElementById("storeId").value;
 
- let liveSnap = await getDoc(userDocRef);
- let live = liveSnap.data();
- let currentPoints = Number(live.points || 0);
-
- let pts = Number(document.getElementById("amount").value);
- let store = document.getElementById("storeId").value;
-
- if(!pts || pts<=0){
-   msg.innerHTML="<span class='error'>Enter valid amount ❌</span>";
-   return;
- }
- if(currentPoints <= 0){
-   msg.innerHTML="<span class='error'>You have 0 Points ❌</span>";
-   return;
- }
- if(pts > currentPoints){
-   msg.innerHTML="<span class='error'>Insufficient Points ❌</span>";
-   return;
- }
+ if(pts<=0) return msg.innerHTML="<span class='error'>Invalid Amount ❌</span>";
+ if(balance<=0) return msg.innerHTML="<span class='error'>Balance 0 ❌</span>";
+ if(pts>balance) return msg.innerHTML="<span class='error'>Insufficient Points ❌</span>";
 
  await updateDoc(userDocRef,{
-   points: currentPoints - pts,
-   history: arrayUnion({store:store,points:pts,time:new Date()})
+  points: balance-pts,
+  history: arrayUnion({
+   type:"Send to Store",
+   peer:storeEmail,
+   points:pts,
+   time:new Date()
+  })
  });
 
- const storeRef=doc(db,"stores",store);
+ const storeRef=doc(db,"stores",storeEmail);
  let s=await getDoc(storeRef);
- if(!s.exists()) await setDoc(storeRef,{name:store,transactions:[]});
-
+ if(!s.exists()) await setDoc(storeRef,{name:storeEmail,transactions:[]});
  await updateDoc(storeRef,{
-   transactions:arrayUnion({user:userEmail,points:pts,time:new Date()})
+  transactions:arrayUnion({user:userEmail,points:pts,time:new Date()})
  });
 
- msg.innerHTML="<span class='success'>Points Sent Successfully ✔</span>";
+ msg.innerHTML="<span class='success'>Sent to Store ✔</span>";
+ loadUser();
+}
+
+// ---------- SEND TO USER ----------
+window.sendToUser = async function(){
+ msg.innerHTML="Processing...";
+ let live = (await getDoc(userDocRef)).data();
+ let balance=Number(live.points||0);
+ let pts=Number(document.getElementById("userAmount").value);
+ let rec=document.getElementById("userId").value;
+
+ if(pts<=0) return msg.innerHTML="<span class='error'>Invalid Amount ❌</span>";
+ if(balance<=0) return msg.innerHTML="<span class='error'>Balance 0 ❌</span>";
+ if(pts>balance) return msg.innerHTML="<span class='error'>Insufficient Points ❌</span>";
+
+ const recRef=doc(db,"users",rec);
+ let r=await getDoc(recRef);
+ if(!r.exists()) return msg.innerHTML="<span class='error'>User Not Found ❌</span>";
+
+ await updateDoc(userDocRef,{
+  points: balance-pts,
+  history:arrayUnion({
+   type:"Send to User",
+   peer:rec,
+   points:pts,
+   time:new Date()
+  })
+ });
+
+ let recData=r.data();
+ await updateDoc(recRef,{
+  points:(recData.points||0)+pts,
+  history:arrayUnion({
+   type:"Received from User",
+   peer:userEmail,
+   points:pts,
+   time:new Date()
+  })
+ });
+
+ msg.innerHTML="<span class='success'>Sent to User ✔</span>";
+ loadUser();
+}
+
+// ---------- CREDIT ----------
+window.creditPoints = async function(){
+ let pts=Number(document.getElementById("creditAmount").value);
+ if(pts<=0) return msg.innerHTML="<span class='error'>Invalid Amount ❌</span>";
+
+ let live=(await getDoc(userDocRef)).data();
+ await updateDoc(userDocRef,{
+  points:(live.points||0)+pts,
+  history:arrayUnion({
+   type:"Credit",
+   peer:"System",
+   points:pts,
+   time:new Date()
+  })
+ });
+
+ msg.innerHTML="<span class='success'>Balance Credited ✔</span>";
  loadUser();
 }
 
 // ---------- LOGOUT ----------
-window.logout = function(){
- signOut(auth).then(()=>{
-   location="index.html";
- });
+window.logout=function(){
+ signOut(auth).then(()=>location="index.html");
 }
-
 </script>
 </body>
 </html>
