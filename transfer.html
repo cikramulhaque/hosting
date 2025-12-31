@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Transfer Points</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+body{
+ background:#0d0d0d;
+ color:white;
+ font-family:Arial;
+ margin:0;
+ padding:20px;
+}
+.container{
+ max-width:450px;
+ margin:auto;
+ background:#121212;
+ padding:20px;
+ border-radius:10px;
+}
+input{
+ width:100%;
+ padding:10px;
+ margin:8px 0;
+ border-radius:5px;
+ border:none;
+}
+button{
+ width:100%;
+ padding:10px;
+ margin-top:10px;
+ border-radius:5px;
+ border:none;
+ background:#00c853;
+ color:white;
+ font-size:16px;
+}
+.card{margin:10px 0;}
+</style>
+</head>
+<body>
+
+<div class="container">
+<h2>Customer Panel</h2>
+<div class="card">Email: <span id="email"></span></div>
+<div class="card">Points: <span id="points">0</span></div>
+<div class="card">Bottles: <span id="bottles">0</span></div>
+
+<input id="storeId" placeholder="Store Email">
+<input id="amount" type="number" placeholder="Points to Send">
+<button onclick="sendPoints()">SEND</button>
+
+<p id="msg"></p>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { getFirestore, doc, getDoc, updateDoc, setDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+const firebaseConfig = {
+ // 🔥 paste firebase config
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth();
+const db = getFirestore();
+
+const msg=document.getElementById("msg");
+let userEmail="";
+let userDocRef;
+let userData={};
+
+onAuthStateChanged(auth, async (user)=>{
+ if(!user) location="index.html";
+ userEmail=user.email;
+ document.getElementById("email").innerText=userEmail;
+ userDocRef = doc(db,"users",userEmail);
+ let snap=await getDoc(userDocRef);
+ if(snap.exists()){
+   userData=snap.data();
+   document.getElementById("points").innerText=userData.points||0;
+   document.getElementById("bottles").innerText=userData.bottles||0;
+ } else {
+   await setDoc(userDocRef,{email:userEmail,points:0,bottles:0,history:[]});
+ }
+});
+
+window.sendPoints = async function(){
+ msg.innerHTML="Processing...";
+ let pts = Number(document.getElementById("amount").value);
+ let store = document.getElementById("storeId").value;
+
+ if(pts<=0) return msg.innerHTML="Invalid amount";
+ if(pts > userData.points) return msg.innerHTML="Not enough points";
+
+ // update user
+ await updateDoc(userDocRef,{
+   points:userData.points-pts,
+   history:arrayUnion({store:store,points:pts,time:new Date()})
+ });
+
+ // update store
+ const storeRef=doc(db,"stores",store);
+ let s=await getDoc(storeRef);
+ if(!s.exists()) await setDoc(storeRef,{name:store,transactions:[]});
+ await updateDoc(storeRef,{
+   transactions:arrayUnion({user:userEmail,points:pts,time:new Date()})
+ });
+
+ msg.innerHTML="Points sent successfully ✔";
+ location.reload();
+}
+</script>
+</body>
+</html>
