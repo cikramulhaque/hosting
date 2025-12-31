@@ -1,186 +1,137 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Bottle Rewards MVP</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <style>
-    body{
-      font-family:Arial;
-      background:#0c1320;
-      color:#fff;
-      display:flex;
-      justify-content:center;
-      align-items:center;
-      height:100vh;
-      margin:0;
-    }
-    #app{width:90%;max-width:400px;text-align:center;}
-    section{
-      background:#161f35;
-      padding:25px;
-      border-radius:10px;
-      box-shadow:0 0 20px #000;
-    }
-    input{
-      width:90%;
-      padding:10px;
-      margin:10px;
-      border-radius:5px;
-      border:none;
-    }
-    button{
-      width:94%;
-      padding:10px;
-      margin:10px;
-      border:none;
-      border-radius:5px;
-      background:#4CAF50;
-      color:#fff;
-      font-size:16px;
-      cursor:pointer;
-    }
-    .link{color:#4CAF50;cursor:pointer;}
-    .hidden{display:none;}
-  </style>
+<title>Store Panel - Bottle Rewards</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+body{
+  background:#0b132b;
+  color:white;
+  font-family:Arial;
+  text-align:center;
+}
+.card{
+  background:#1c2541;
+  padding:20px;
+  border-radius:15px;
+  width:340px;
+  margin:20px auto;
+}
+input{
+  width:90%;
+  padding:10px;
+  border-radius:10px;
+  border:none;
+  margin:5px;
+}
+button{
+  background:#5bc0be;
+  padding:10px;
+  border:none;
+  border-radius:10px;
+  margin-top:10px;
+  cursor:pointer;
+}
+.txn{
+  background:#3a506b;
+  padding:10px;
+  border-radius:10px;
+  margin-top:8px;
+}
+</style>
 </head>
 
 <body>
 
-<div id="app">
+<h1>Store Panel</h1>
 
-  <!-- Landing -->
-  <section id="landing">
-    <h1>♻ Bottle Rewards</h1>
-    <p>Earn rewards by recycling plastic bottles</p>
-    <button onclick="showRegister()">Get Started</button>
-  </section>
-
-  <!-- Register -->
-  <section id="register" class="hidden">
-    <h2>Create Account</h2>
-    <input id="regEmail" type="email" placeholder="Email">
-    <input id="regPass" type="password" placeholder="Password">
-    <button onclick="register()">Register</button>
-    <p class="link" onclick="showLogin()">Already have an account? Login</p>
-    <button onclick="goBack()">Back</button>
-    <p id="regMsg"></p>
-  </section>
-
-  <!-- Login -->
-  <section id="login" class="hidden">
-    <h2>Login</h2>
-    <input id="loginEmail" type="email" placeholder="Email">
-    <input id="loginPass" type="password" placeholder="Password">
-    <button onclick="login()">Login</button>
-    <p class="link" onclick="showRegister()">Create Account</p>
-    <button onclick="goBack()">Back</button>
-    <p id="loginMsg"></p>
-  </section>
-
-  <!-- Dashboard -->
-  <section id="dashboard" class="hidden">
-    <h2>Welcome 🎉</h2>
-    <p id="userEmail"></p>
-
-    <h3>Your Rewards</h3>
-    <p>Bottles: <b id="bottles">0</b></p>
-    <p>Points: <b id="points">0</b></p>
-    <p>Last Updated: <b id="lastUpdate">none</b></p>
-
-    <button onclick="logout()">Logout</button>
-  </section>
-
+<div id="loginBox" class="card">
+  <h3>Store Login</h3>
+  <input id="email" placeholder="Store Email">
+  <input id="pass" type="password" placeholder="Password">
+  <button onclick="login()">Login</button>
+  <p id="msg"></p>
 </div>
 
-<!-- Firebase v8 -->
-<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+<div id="storeBox" class="card" style="display:none">
+  <h2 id="storeName"></h2>
+  <button onclick="logout()">Logout</button>
 
-<script>
-var firebaseConfig = {
- apiKey: "AIzaSyA7Tck7VFnldXnKj9fMpPc9bSWqgVQA8jU",
- authDomain: "bottlereward.firebaseapp.com",
- projectId: "bottlereward",
- appId: "1:842823471278:web:a7bbbb0291e581dcc71d3f"
+  <h3>Transactions</h3>
+  <div id="list"></div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getAuth, signInWithEmailAndPassword, signOut } 
+from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { getFirestore, doc, getDoc } 
+from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "YOUR_KEY",
+  authDomain: "YOUR_PROJECT.firebaseapp.com",
+  projectId: "YOUR_PROJECT"
 };
 
-firebase.initializeApp(firebaseConfig);
-var auth = firebase.auth();
-var db = firebase.firestore();
+const app = initializeApp(firebaseConfig);
+const auth = getAuth();
+const db = getFirestore();
 
-let landing=document.getElementById("landing");
-let loginBox=document.getElementById("login");
-let regBox=document.getElementById("register");
-let dashboard=document.getElementById("dashboard");
+const loginBox = document.getElementById("loginBox");
+const storeBox = document.getElementById("storeBox");
+const storeName = document.getElementById("storeName");
+const list = document.getElementById("list");
+const msg = document.getElementById("msg");
 
-window.showRegister=function(){
- landing.classList.add("hidden");
- loginBox.classList.add("hidden");
- regBox.classList.remove("hidden");
+window.login = async function(){
+  let email = document.getElementById("email").value;
+  let pass = document.getElementById("pass").value;
+
+  try{
+    await signInWithEmailAndPassword(auth,email,pass);
+    loadStore(email);
+  }catch(e){
+    msg.innerHTML = e.message;
+  }
 }
 
-window.showLogin=function(){
- regBox.classList.add("hidden");
- loginBox.classList.remove("hidden");
+async function loadStore(email){
+  const ref = doc(db,"stores",email);
+  const snap = await getDoc(ref);
+
+  if(!snap.exists()){
+    alert("Store not found in database");
+    return;
+  }
+
+  const data = snap.data();
+  storeName.innerHTML = data.name || "Store";
+
+  list.innerHTML = "";
+
+  if(!data.transactions || data.transactions.length === 0){
+    list.innerHTML = "<p>No transactions yet</p>";
+  } else {
+    data.transactions.forEach(t=>{
+      list.innerHTML += `
+        <div class='txn'>
+          <p>User: ${t.user}</p>
+          <p>Points: ${t.points}</p>
+          <p>Time: ${t.time}</p>
+        </div>
+      `;
+    });
+  }
+
+  loginBox.style.display="none";
+  storeBox.style.display="block";
 }
 
-window.goBack=function(){
- regBox.classList.add("hidden");
- loginBox.classList.add("hidden");
- landing.classList.remove("hidden");
-}
-
-window.register=function(){
- let email=document.getElementById("regEmail").value;
- let pass=document.getElementById("regPass").value;
- let msg=document.getElementById("regMsg");
-
- auth.createUserWithEmailAndPassword(email,pass)
- .then(()=> {
-   msg.innerText="Account created 🎉";
-   db.collection("users").doc(email).set({
-     email: email,
-     bottles: 0,
-     points: 0,
-     lastUpdated: "none"
-   });
- })
- .catch(e=> msg.innerText=e.message);
-}
-
-window.login=function(){
- let email=document.getElementById("loginEmail").value;
- let pass=document.getElementById("loginPass").value;
- let msg=document.getElementById("loginMsg");
-
- auth.signInWithEmailAndPassword(email,pass)
- .then(()=> msg.innerText="Login Success 🎉")
- .catch(e=> msg.innerText=e.message);
-}
-
-auth.onAuthStateChanged(async user=>{
- if(user){
-   landing.classList.add("hidden");
-   loginBox.classList.add("hidden");
-   regBox.classList.add("hidden");
-   dashboard.classList.remove("hidden");
-
-   document.getElementById("userEmail").innerText=user.email;
-
-   let doc = await db.collection("users").doc(user.email).get();
-   if(doc.exists){
-     document.getElementById("bottles").innerText = doc.data().bottles;
-     document.getElementById("points").innerText = doc.data().points;
-     document.getElementById("lastUpdate").innerText = doc.data().lastUpdated;
-   }
- }
-});
-
-window.logout=function(){
- auth.signOut();
- dashboard.classList.add("hidden");
- landing.classList.remove("hidden");
+window.logout = function(){
+  signOut(auth);
+  storeBox.style.display="none";
+  loginBox.style.display="block";
 }
 </script>
 
