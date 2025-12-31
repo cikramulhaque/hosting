@@ -82,6 +82,25 @@ async function loadUser(){
  loadHistory(data);
 }
 
+function formatTime(t){
+ // Firestore Timestamp -> convert properly
+ if(t?.seconds){
+   return new Date(t.seconds * 1000).toLocaleString();
+ }
+
+ // If it is Date stored as string
+ if(typeof t === "string" || typeof t === "number"){
+   return new Date(t).toLocaleString();
+ }
+
+ // If it is JS Date object already
+ if(t instanceof Date){
+   return t.toLocaleString();
+ }
+
+ return "Unknown Time";
+}
+
 function loadHistory(data){
  const box=document.getElementById("history");
  box.innerHTML="";
@@ -92,7 +111,7 @@ function loadHistory(data){
  data.history.slice().reverse().forEach(t=>{
   let d=document.createElement("div");
   d.className="historyBox";
-  d.innerHTML=`Store: ${t.store}<br>Points: ${t.points}<br>Time: ${new Date(t.time).toLocaleString()}`;
+  d.innerHTML=`Store: ${t.store}<br>Points: ${t.points}<br>Time: ${formatTime(t.time)}`;
   box.appendChild(d);
  });
 }
@@ -100,7 +119,6 @@ function loadHistory(data){
 window.sendPoints = async function(){
  msg.innerHTML="Processing...";
 
- // always re-read latest firestore data (no trust)
  let liveSnap = await getDoc(userDocRef);
  let live = liveSnap.data();
  let currentPoints = Number(live.points || 0);
@@ -137,7 +155,7 @@ window.sendPoints = async function(){
  });
 
  msg.innerHTML="<span class='success'>Points Sent Successfully ✔</span>";
- loadUser();  // refresh UI without reload
+ loadUser();
 }
 </script>
 </body>
