@@ -112,8 +112,19 @@ button{
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { getFirestore, setDoc, doc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { 
+  getAuth, 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword,
+  signOut
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+import { 
+  getFirestore, 
+  setDoc, 
+  doc, 
+  getDoc 
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyA7Tck7VFnldXnKj9fMpPc9bSWqgVQA8jU",
@@ -127,9 +138,10 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth();
 const db = getFirestore();
-
 const msg = document.getElementById("msg");
 
+
+// ---------------- REGISTER CUSTOMER ----------------
 window.registerUser = function(){
  msg.innerHTML="Creating Account...";
  createUserWithEmailAndPassword(auth,
@@ -148,6 +160,8 @@ window.registerUser = function(){
  .catch(e=>msg.innerHTML=e.message);
 }
 
+
+// ---------------- CUSTOMER LOGIN ----------------
 window.customerLogin = function(){
   msg.innerHTML="Processing...";
   signInWithEmailAndPassword(auth,
@@ -160,17 +174,36 @@ window.customerLogin = function(){
   .catch(e=>msg.innerHTML=e.message);
 }
 
-window.storeLogin = function(){
-  msg.innerHTML="Processing...";
-  signInWithEmailAndPassword(auth,
-    document.getElementById("semail").value,
-    document.getElementById("spass").value)
-  .then(()=>{
-    msg.innerHTML="Login Success ✔ Redirecting…";
-    setTimeout(()=>location="store.html",1200);
-  })
-  .catch(e=>msg.innerHTML=e.message);
+
+// ---------------- STORE LOGIN (STRICT) ----------------
+window.storeLogin = async function(){
+ msg.innerHTML="Checking Store Access...";
+
+ let email = document.getElementById("semail").value;
+ let pass  = document.getElementById("spass").value;
+
+ try {
+   // Login first
+   let res = await signInWithEmailAndPassword(auth,email,pass);
+
+   // Now verify if email exists in stores collection
+   let storeRef = doc(db,"stores",email);
+   let snap = await getDoc(storeRef);
+
+   if(!snap.exists()){
+      msg.innerHTML="❌ Not Authorized as Store";
+      await signOut(auth);
+      return;
+   }
+
+   msg.innerHTML="Store Verified ✔ Redirecting...";
+   setTimeout(()=>location="store.html",1200);
+ }
+ catch(e){
+  msg.innerHTML=e.message;
+ }
 }
+
 </script>
 
 <script>
@@ -193,7 +226,7 @@ function showStore(){
 function showRegister(){
  document.getElementById("customerLogin").style.display="none";
  document.getElementById("storeLogin").style.display="none";
- document.getElementById("registerBox").style.display="block";
+ document.getElementById("registerBox").display="block";
  document.getElementById("title").innerText="Register";
 }
 function toggle(id){
