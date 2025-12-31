@@ -6,58 +6,19 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
 <style>
-body{
-  margin:0;
-  background:#0d0d0d;
-  color:white;
-  font-family:Arial;
-  height:100vh;
-  display:flex;
-  justify-content:center;
-  align-items:center;
-}
-.container{
-  width:90%;
-  max-width:400px;
-  background:#121212;
-  padding:25px;
-  border-radius:10px;
-  position:relative;
-}
+body{margin:0;background:#0d0d0d;color:white;font-family:Arial;height:100vh;display:flex;justify-content:center;align-items:center;}
+.container{width:90%;max-width:400px;background:#121212;padding:25px;border-radius:10px;position:relative;}
 h2{text-align:center;margin-bottom:20px;}
-input{
-  width:100%;
-  padding:10px;
-  margin:8px 0;
-  border-radius:5px;
-  border:none;
-}
-button{
-  width:100%;
-  padding:10px;
-  margin-top:10px;
-  border-radius:5px;
-  border:none;
-  background:#00c853;
-  color:white;
-  font-size:16px;
-}
+input{width:100%;padding:10px;margin:8px 0;border-radius:5px;border:none;}
+button{width:100%;padding:10px;margin-top:10px;border-radius:5px;border:none;background:#00c853;color:white;font-size:16px;}
 .linkBtn{color:#00c8ff;text-align:center;margin-top:10px;cursor:pointer;}
 .menu{position:absolute;top:10px;right:10px;cursor:pointer;font-size:22px;}
-.dropdown{
-  position:absolute;right:10px;top:35px;
-  background:#1c1c1c;padding:10px;border-radius:5px;display:none;
-}
+.dropdown{position:absolute;right:10px;top:35px;background:#1c1c1c;padding:10px;border-radius:5px;display:none;}
 .dropdown div{padding:5px 10px;cursor:pointer;}
 .dropdown div:hover{background:#333;}
 #storeLogin{display:none;}
 #registerBox{display:none;}
-.toggle-eye{
-  position:absolute;
-  right:30px;
-  margin-top:-34px;
-  cursor:pointer;
-}
+.toggle-eye{position:absolute;right:30px;margin-top:-34px;cursor:pointer;}
 .message{text-align:center;margin-top:10px;}
 .error{color:#ff4b4b;}
 .success{color:#00ff6a;}
@@ -83,6 +44,7 @@ button{
     <input id="cpass" type="password" placeholder="Password">
     <span class="toggle-eye" onclick="toggle('cpass')">👁</span>
     <button onclick="customerLogin()">Login</button>
+
     <div class="linkBtn" onclick="showRegister()">Create Account</div>
     <div class="linkBtn" onclick="forgotPassword()">Forgot Password?</div>
   </div>
@@ -150,7 +112,7 @@ const db = getFirestore();
 const msg = document.getElementById("msg");
 
 
-// REGISTER USER (with confirm password)
+// ---------- REGISTER ----------
 window.registerUser = function(){
  const email=document.getElementById("remail").value;
  const pass=document.getElementById("rpass").value;
@@ -177,7 +139,7 @@ window.registerUser = function(){
 }
 
 
-// CUSTOMER LOGIN
+// ---------- CUSTOMER LOGIN ----------
 window.customerLogin = function(){
   msg.innerHTML="Processing...";
   signInWithEmailAndPassword(auth,
@@ -191,9 +153,11 @@ window.customerLogin = function(){
 }
 
 
-// FORGOT PASSWORD
+// ---------- FORGOT PASSWORD (FULLY WORKING) ----------
 window.forgotPassword = function(){
  const email=document.getElementById("cemail").value;
+
+ msg.innerHTML="Processing reset request...";
 
  if(!email){
    msg.innerHTML="<span class='error'>Enter your email first ❌</span>";
@@ -204,27 +168,28 @@ window.forgotPassword = function(){
  .then(()=>{
    msg.innerHTML="<span class='success'>Reset email sent ✔ Check inbox</span>";
  })
- .catch(e=>msg.innerHTML=e.message);
+ .catch(e=>{
+   msg.innerHTML=e.message;
+ });
 }
 
 
-// SECURED STORE LOGIN
+// ---------- STORE LOGIN SECURE ----------
 window.storeLogin = async function(){
  msg.innerHTML="Checking Store Access...";
+ let email=document.getElementById("semail").value;
+ let pass=document.getElementById("spass").value;
 
- let email = document.getElementById("semail").value;
- let pass  = document.getElementById("spass").value;
-
- try {
-   let res = await signInWithEmailAndPassword(auth,email,pass);
+ try{
+   await signInWithEmailAndPassword(auth,email,pass);
 
    let storeRef = doc(db,"stores",email);
    let snap = await getDoc(storeRef);
 
    if(!snap.exists()){
-      msg.innerHTML="❌ Not Authorized as Store";
-      await signOut(auth);
-      return;
+     msg.innerHTML="❌ Not Authorized as Store";
+     await signOut(auth);
+     return;
    }
 
    msg.innerHTML="<span class='success'>Store Verified ✔ Redirecting...</span>";
@@ -242,11 +207,9 @@ function toggleMenu(){
  const m=document.getElementById("menuDrop");
  m.style.display = m.style.display==="block"?"none":"block";
 }
-
 function closeMenu(){
  document.getElementById("menuDrop").style.display="none";
 }
-
 function showCustomer(){
  closeMenu();
  document.getElementById("customerLogin").style.display="block";
@@ -254,7 +217,6 @@ function showCustomer(){
  document.getElementById("registerBox").style.display="none";
  document.getElementById("title").innerText="Customer Login";
 }
-
 function showStore(){
  closeMenu();
  document.getElementById("customerLogin").style.display="none";
@@ -262,7 +224,6 @@ function showStore(){
  document.getElementById("registerBox").style.display="none";
  document.getElementById("title").innerText="Store Login";
 }
-
 function showRegister(){
  closeMenu();
  document.getElementById("customerLogin").style.display="none";
@@ -270,7 +231,6 @@ function showRegister(){
  document.getElementById("registerBox").style.display="block";
  document.getElementById("title").innerText="Register";
 }
-
 function toggle(id){
  let f=document.getElementById(id);
  f.type=f.type==="password"?"text":"password";
