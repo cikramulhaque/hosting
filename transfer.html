@@ -27,7 +27,7 @@ button{width:100%;padding:10px;margin-top:10px;border-radius:5px;border:none;fon
 <div class="card">Points: <span id="points">0</span></div>
 <div class="card">Bottles: <span id="bottles">0</span></div>
 
-<!-- SINGLE SEND SECTION -->
+<!-- SINGLE SEND -->
 <div class="box">
 <h3>Send Points</h3>
 <input id="receiver" placeholder="Enter User / Store Email">
@@ -116,19 +116,32 @@ function loadHistory(data){
  });
 }
 
+
 // ---------- SINGLE SEND ----------
 window.sendPoints = async function(){
  msg.innerHTML="Processing...";
 
+ let amountField=document.getElementById("amount");
+ let receiverField=document.getElementById("receiver");
+
+ let pts = Number(amountField.value);
+ let receiver = receiverField.value;
+
  let live = (await getDoc(userDocRef)).data();
  let balance = Number(live.points||0);
 
- let pts = Number(document.getElementById("amount").value);
- let receiver = document.getElementById("receiver").value;
-
- if(pts<=0) return msg.innerHTML="<span class='error'>Invalid Amount ❌</span>";
- if(balance<=0) return msg.innerHTML="<span class='error'>Balance 0 ❌</span>";
- if(pts>balance) return msg.innerHTML="<span class='error'>Insufficient Points ❌</span>";
+ if(pts<=0){
+   msg.innerHTML="<span class='error'>Enter valid points ❌</span>";
+   return;
+ }
+ if(balance<=0){
+   msg.innerHTML="<span class='error'>Balance 0 ❌</span>";
+   return;
+ }
+ if(pts>balance){
+   msg.innerHTML="<span class='error'>Insufficient Points ❌</span>";
+   return;
+ }
 
  const userRef = doc(db,"users",receiver);
  const storeRef = doc(db,"stores",receiver);
@@ -136,7 +149,7 @@ window.sendPoints = async function(){
  const userSnap = await getDoc(userRef);
  const storeSnap = await getDoc(storeRef);
 
- // ---------- Receiver is USER ----------
+ // ---------- USER RECEIVER ----------
  if(userSnap.exists()){
    let recData=userSnap.data();
 
@@ -161,10 +174,12 @@ window.sendPoints = async function(){
    });
 
    msg.innerHTML="<span class='success'>Sent to User ✔</span>";
+   amountField.value="";
+   receiverField.value="";
    return loadUser();
  }
 
- // ---------- Receiver is STORE ----------
+ // ---------- STORE RECEIVER ----------
  if(storeSnap.exists()){
    await updateDoc(userDocRef,{
      points:balance-pts,
@@ -180,16 +195,20 @@ window.sendPoints = async function(){
      transactions:arrayUnion({
        user:userEmail,
        points:pts,
-       time:new Date()
+       time:new Date(),
+       refunded:false
      })
    });
 
    msg.innerHTML="<span class='success'>Sent to Store ✔</span>";
+   amountField.value="";
+   receiverField.value="";
    return loadUser();
  }
 
  msg.innerHTML="<span class='error'>Receiver Not Found ❌</span>";
 }
+
 
 // ---------- LOGOUT ----------
 window.logout=function(){
