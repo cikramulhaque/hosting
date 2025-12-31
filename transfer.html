@@ -60,8 +60,10 @@ onAuthStateChanged(auth, async (user)=>{
  if(!user) location="index.html";
  userEmail=user.email;
  document.getElementById("email").innerText=userEmail;
+
  userDocRef = doc(db,"users",userEmail);
  let snap=await getDoc(userDocRef);
+
  if(snap.exists()){
    userData=snap.data();
    document.getElementById("points").innerText=userData.points||0;
@@ -90,8 +92,20 @@ window.sendPoints = async function(){
  let pts = Number(document.getElementById("amount").value);
  let store = document.getElementById("storeId").value;
 
- if(pts<=0) return msg.innerHTML="<span class='error'>Invalid Amount ❌</span>";
- if(pts > userData.points) return msg.innerHTML="<span class='error'>Insufficient Points ❌</span>";
+ if(!pts || pts<=0){
+   msg.innerHTML="<span class='error'>Enter valid amount ❌</span>";
+   return;
+ }
+
+ if(!userData.points || userData.points <= 0){
+   msg.innerHTML="<span class='error'>You have 0 Points ❌</span>";
+   return;
+ }
+
+ if(pts > userData.points){
+   msg.innerHTML="<span class='error'>Insufficient Points ❌</span>";
+   return;
+ }
 
  await updateDoc(userDocRef,{
    points:userData.points-pts,
