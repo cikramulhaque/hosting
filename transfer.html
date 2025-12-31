@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Transfer & Wallet</title>
+<title>Wallet & Transfer</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
 body{background:#0d0d0d;color:white;font-family:Arial;margin:0;padding:20px;}
@@ -12,7 +12,6 @@ body{background:#0d0d0d;color:white;font-family:Arial;margin:0;padding:20px;}
 input{width:100%;padding:10px;margin:8px 0;border-radius:5px;border:none;}
 button{width:100%;padding:10px;margin-top:10px;border-radius:5px;border:none;font-size:16px;}
 .btnGreen{background:#00c853;color:white;}
-.btnBlue{background:#2196F3;color:white;}
 .btnRed{background:#ff5252;color:white;}
 .historyBox{background:#1f1f1f;padding:10px;border-radius:5px;margin-top:10px;}
 .success{color:#00ff6a;}
@@ -28,20 +27,12 @@ button{width:100%;padding:10px;margin-top:10px;border-radius:5px;border:none;fon
 <div class="card">Points: <span id="points">0</span></div>
 <div class="card">Bottles: <span id="bottles">0</span></div>
 
-<!-- SEND TO STORE -->
+<!-- SINGLE SEND SECTION -->
 <div class="box">
-<h3>Send Points to Store</h3>
-<input id="storeId" placeholder="Store Email">
-<input id="storeAmount" type="number" placeholder="Points">
-<button class="btnGreen" onclick="sendToStore()">Send to Store</button>
-</div>
-
-<!-- SEND TO USER -->
-<div class="box">
-<h3>Send Points to User</h3>
-<input id="userId" placeholder="User Email">
-<input id="userAmount" type="number" placeholder="Points">
-<button class="btnBlue" onclick="sendToUser()">Send to User</button>
+<h3>Send Points</h3>
+<input id="receiver" placeholder="Enter User / Store Email">
+<input id="amount" type="number" placeholder="Points">
+<button class="btnGreen" onclick="sendPoints()">Send Points</button>
 </div>
 
 <button class="btnRed" onclick="logout()">Logout</button>
@@ -125,82 +116,79 @@ function loadHistory(data){
  });
 }
 
-// ---------- SEND TO STORE ----------
-window.sendToStore = async function(){
+// ---------- SINGLE SEND ----------
+window.sendPoints = async function(){
  msg.innerHTML="Processing...";
+
  let live = (await getDoc(userDocRef)).data();
  let balance = Number(live.points||0);
- let pts = Number(document.getElementById("storeAmount").value);
- let storeEmail=document.getElementById("storeId").value;
+
+ let pts = Number(document.getElementById("amount").value);
+ let receiver = document.getElementById("receiver").value;
 
  if(pts<=0) return msg.innerHTML="<span class='error'>Invalid Amount ❌</span>";
  if(balance<=0) return msg.innerHTML="<span class='error'>Balance 0 ❌</span>";
  if(pts>balance) return msg.innerHTML="<span class='error'>Insufficient Points ❌</span>";
 
- // Deduct from user & record
- await updateDoc(userDocRef,{
-  points: balance-pts,
-  history: arrayUnion({
-   type:"Send to Store",
-   peer:storeEmail,
-   points:pts,
-   time:new Date()
-  })
- });
+ const userRef = doc(db,"users",receiver);
+ const storeRef = doc(db,"stores",receiver);
 
- // Store transaction log ONLY
- const storeRef=doc(db,"stores",storeEmail);
- let s=await getDoc(storeRef);
- if(!s.exists()) await setDoc(storeRef,{name:storeEmail,transactions:[]});
- await updateDoc(storeRef,{
-  transactions:arrayUnion({user:userEmail,points:pts,time:new Date()})
- });
+ const userSnap = await getDoc(userRef);
+ const storeSnap = await getDoc(storeRef);
 
- msg.innerHTML="<span class='success'>Sent to Store ✔</span>";
- loadUser();
-}
+ // ---------- Receiver is USER ----------
+ if(userSnap.exists()){
+   let recData=userSnap.data();
 
-// ---------- SEND TO USER ----------
-window.sendToUser = async function(){
- msg.innerHTML="Processing...";
- let live = (await getDoc(userDocRef)).data();
- let balance=Number(live.points||0);
- let pts=Number(document.getElementById("userAmount").value);
- let rec=document.getElementById("userId").value;
+   await updateDoc(userDocRef,{
+     points:balance-pts,
+     history:arrayUnion({
+       type:"Send to User",
+       peer:receiver,
+       points:pts,
+       time:new Date()
+     })
+   });
 
- if(pts<=0) return msg.innerHTML="<span class='error'>Invalid Amount ❌</span>";
- if(balance<=0) return msg.innerHTML="<span class='error'>Balance 0 ❌</span>";
- if(pts>balance) return msg.innerHTML="<span class='error'>Insufficient Points ❌</span>";
+   await updateDoc(userRef,{
+     points:(recData.points||0)+pts,
+     history:arrayUnion({
+       type:"Received from User",
+       peer:userEmail,
+       points:pts,
+       time:new Date()
+     })
+   });
 
- const recRef=doc(db,"users",rec);
- let r=await getDoc(recRef);
- if(!r.exists()) return msg.innerHTML="<span class='error'>User Not Found ❌</span>";
+   msg.innerHTML="<span class='success'>Sent to User ✔</span>";
+   return loadUser();
+ }
 
- // Deduct sender
- await updateDoc(userDocRef,{
-  points: balance-pts,
-  history:arrayUnion({
-   type:"Send to User",
-   peer:rec,
-   points:pts,
-   time:new Date()
-  })
- });
+ // ---------- Receiver is STORE ----------
+ if(storeSnap.exists()){
+   await updateDoc(userDocRef,{
+     points:balance-pts,
+     history:arrayUnion({
+       type:"Send to Store",
+       peer:receiver,
+       points:pts,
+       time:new Date()
+     })
+   });
 
- // Credit receiver
- let recData=r.data();
- await updateDoc(recRef,{
-  points:(recData.points||0)+pts,
-  history:arrayUnion({
-   type:"Received from User",
-   peer:userEmail,
-   points:pts,
-   time:new Date()
-  })
- });
+   await updateDoc(storeRef,{
+     transactions:arrayUnion({
+       user:userEmail,
+       points:pts,
+       time:new Date()
+     })
+   });
 
- msg.innerHTML="<span class='success'>Sent to User ✔</span>";
- loadUser();
+   msg.innerHTML="<span class='success'>Sent to Store ✔</span>";
+   return loadUser();
+ }
+
+ msg.innerHTML="<span class='error'>Receiver Not Found ❌</span>";
 }
 
 // ---------- LOGOUT ----------
