@@ -44,13 +44,6 @@ button{width:100%;padding:10px;margin-top:10px;border-radius:5px;border:none;fon
 <button class="btnBlue" onclick="sendToUser()">Send to User</button>
 </div>
 
-<!-- CREDIT BALANCE -->
-<div class="box">
-<h3>Credit My Wallet</h3>
-<input id="creditAmount" type="number" placeholder="Points to Credit">
-<button class="btnGreen" onclick="creditPoints()">Credit Balance</button>
-</div>
-
 <button class="btnRed" onclick="logout()">Logout</button>
 
 <p id="msg"></p>
@@ -125,7 +118,7 @@ function loadHistory(data){
   div.className="historyBox";
   div.innerHTML=
    `<b>Type:</b> ${t.type}<br>
-    <b>To/From:</b> ${t.peer}<br>
+    <b>Peer:</b> ${t.peer}<br>
     <b>Points:</b> ${t.points}<br>
     <b>Time:</b> ${formatTime(t.time)}`;
   box.appendChild(div);
@@ -144,6 +137,7 @@ window.sendToStore = async function(){
  if(balance<=0) return msg.innerHTML="<span class='error'>Balance 0 ❌</span>";
  if(pts>balance) return msg.innerHTML="<span class='error'>Insufficient Points ❌</span>";
 
+ // Deduct from user & record
  await updateDoc(userDocRef,{
   points: balance-pts,
   history: arrayUnion({
@@ -154,6 +148,7 @@ window.sendToStore = async function(){
   })
  });
 
+ // Store transaction log ONLY
  const storeRef=doc(db,"stores",storeEmail);
  let s=await getDoc(storeRef);
  if(!s.exists()) await setDoc(storeRef,{name:storeEmail,transactions:[]});
@@ -181,6 +176,7 @@ window.sendToUser = async function(){
  let r=await getDoc(recRef);
  if(!r.exists()) return msg.innerHTML="<span class='error'>User Not Found ❌</span>";
 
+ // Deduct sender
  await updateDoc(userDocRef,{
   points: balance-pts,
   history:arrayUnion({
@@ -191,6 +187,7 @@ window.sendToUser = async function(){
   })
  });
 
+ // Credit receiver
  let recData=r.data();
  await updateDoc(recRef,{
   points:(recData.points||0)+pts,
@@ -203,26 +200,6 @@ window.sendToUser = async function(){
  });
 
  msg.innerHTML="<span class='success'>Sent to User ✔</span>";
- loadUser();
-}
-
-// ---------- CREDIT ----------
-window.creditPoints = async function(){
- let pts=Number(document.getElementById("creditAmount").value);
- if(pts<=0) return msg.innerHTML="<span class='error'>Invalid Amount ❌</span>";
-
- let live=(await getDoc(userDocRef)).data();
- await updateDoc(userDocRef,{
-  points:(live.points||0)+pts,
-  history:arrayUnion({
-   type:"Credit",
-   peer:"System",
-   points:pts,
-   time:new Date()
-  })
- });
-
- msg.innerHTML="<span class='success'>Balance Credited ✔</span>";
  loadUser();
 }
 
