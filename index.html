@@ -141,7 +141,7 @@ const db = getFirestore();
 const msg = document.getElementById("msg");
 
 
-// ---------------- REGISTER CUSTOMER ----------------
+// REGISTER USER
 window.registerUser = function(){
  msg.innerHTML="Creating Account...";
  createUserWithEmailAndPassword(auth,
@@ -161,7 +161,7 @@ window.registerUser = function(){
 }
 
 
-// ---------------- CUSTOMER LOGIN ----------------
+// CUSTOMER LOGIN
 window.customerLogin = function(){
   msg.innerHTML="Processing...";
   signInWithEmailAndPassword(auth,
@@ -175,7 +175,7 @@ window.customerLogin = function(){
 }
 
 
-// ---------------- STORE LOGIN (STRICT) ----------------
+// SECURED STORE LOGIN
 window.storeLogin = async function(){
  msg.innerHTML="Checking Store Access...";
 
@@ -183,10 +183,8 @@ window.storeLogin = async function(){
  let pass  = document.getElementById("spass").value;
 
  try {
-   // Login first
    let res = await signInWithEmailAndPassword(auth,email,pass);
 
-   // Now verify if email exists in stores collection
    let storeRef = doc(db,"stores",email);
    let snap = await getDoc(storeRef);
 
@@ -211,24 +209,36 @@ function toggleMenu(){
  const m=document.getElementById("menuDrop");
  m.style.display = m.style.display==="block"?"none":"block";
 }
+
+// ALWAYS CLOSE MENU WHEN SWITCHING
+function closeMenu(){
+ document.getElementById("menuDrop").style.display="none";
+}
+
 function showCustomer(){
+ closeMenu();
  document.getElementById("customerLogin").style.display="block";
  document.getElementById("storeLogin").style.display="none";
  document.getElementById("registerBox").style.display="none";
  document.getElementById("title").innerText="Customer Login";
 }
+
 function showStore(){
+ closeMenu();
  document.getElementById("customerLogin").style.display="none";
  document.getElementById("storeLogin").style.display="block";
  document.getElementById("registerBox").style.display="none";
  document.getElementById("title").innerText="Store Login";
 }
+
 function showRegister(){
+ closeMenu();
  document.getElementById("customerLogin").style.display="none";
  document.getElementById("storeLogin").style.display="none";
- document.getElementById("registerBox").display="block";
+ document.getElementById("registerBox").style.display="block";
  document.getElementById("title").innerText="Register";
 }
+
 function toggle(id){
  let f=document.getElementById(id);
  f.type=f.type==="password"?"text":"password";
