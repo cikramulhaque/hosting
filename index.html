@@ -16,7 +16,6 @@ body{
   justify-content:center;
   align-items:center;
 }
-
 .container{
   width:90%;
   max-width:400px;
@@ -25,9 +24,7 @@ body{
   border-radius:10px;
   position:relative;
 }
-
 h2{text-align:center;margin-bottom:20px;}
-
 input{
   width:100%;
   padding:10px;
@@ -35,7 +32,6 @@ input{
   border-radius:5px;
   border:none;
 }
-
 button{
   width:100%;
   padding:10px;
@@ -46,7 +42,12 @@ button{
   color:white;
   font-size:16px;
 }
-
+.linkBtn{
+ color:#00c8ff;
+ text-align:center;
+ margin-top:10px;
+ cursor:pointer;
+}
 .menu{
   position:absolute;
   top:10px;
@@ -54,7 +55,6 @@ button{
   cursor:pointer;
   font-size:22px;
 }
-
 .dropdown{
   position:absolute;
   right:10px;
@@ -64,25 +64,16 @@ button{
   border-radius:5px;
   display:none;
 }
-
-.dropdown div{
-  padding:5px 10px;
-  cursor:pointer;
-}
-
-.dropdown div:hover{
-  background:#333;
-}
-
+.dropdown div{padding:5px 10px;cursor:pointer;}
+.dropdown div:hover{background:#333;}
 #storeLogin{display:none;}
-
+#registerBox{display:none;}
 .toggle-eye{
   position:absolute;
   right:30px;
   margin-top:-34px;
   cursor:pointer;
 }
-
 .message{text-align:center;margin-top:10px;}
 </style>
 </head>
@@ -106,6 +97,15 @@ button{
     <input id="cpass" type="password" placeholder="Password">
     <span class="toggle-eye" onclick="toggle('cpass')">👁</span>
     <button onclick="customerLogin()">Login</button>
+    <div class="linkBtn" onclick="showRegister()">Create Account</div>
+  </div>
+
+  <!-- REGISTER -->
+  <div id="registerBox">
+    <input id="remail" type="email" placeholder="Customer Email">
+    <input id="rpass" type="password" placeholder="Password">
+    <button onclick="registerUser()">Register</button>
+    <div class="linkBtn" onclick="showCustomer()">Back to Login</div>
   </div>
 
   <!-- STORE LOGIN -->
@@ -123,7 +123,8 @@ button{
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { getFirestore, setDoc, doc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyA7Tck7VFnldXnKj9fMpPc9bSWqgVQA8jU",
@@ -136,8 +137,27 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth();
+const db = getFirestore();
 
 const msg = document.getElementById("msg");
+
+window.registerUser = function(){
+ msg.innerHTML="Creating Account...";
+ createUserWithEmailAndPassword(auth,
+ document.getElementById("remail").value,
+ document.getElementById("rpass").value)
+ .then(async (u)=>{
+  await setDoc(doc(db,"users",u.user.email),{
+    email:u.user.email,
+    points:0,
+    bottles:0,
+    history:[]
+  });
+  msg.innerHTML="Account Created ✔ Login Now";
+  showCustomer();
+ })
+ .catch(e=>msg.innerHTML=e.message);
+}
 
 window.customerLogin = function(){
   msg.innerHTML="Processing...";
@@ -169,21 +189,24 @@ function toggleMenu(){
  const m=document.getElementById("menuDrop");
  m.style.display = m.style.display==="block"?"none":"block";
 }
-
 function showCustomer(){
  document.getElementById("customerLogin").style.display="block";
  document.getElementById("storeLogin").style.display="none";
+ document.getElementById("registerBox").style.display="none";
  document.getElementById("title").innerText="Customer Login";
- document.getElementById("menuDrop").style.display="none";
 }
-
 function showStore(){
  document.getElementById("customerLogin").style.display="none";
  document.getElementById("storeLogin").style.display="block";
+ document.getElementById("registerBox").style.display="none";
  document.getElementById("title").innerText="Store Login";
- document.getElementById("menuDrop").style.display="none";
 }
-
+function showRegister(){
+ document.getElementById("customerLogin").style.display="none";
+ document.getElementById("storeLogin").style.display="none";
+ document.getElementById("registerBox").style.display="block";
+ document.getElementById("title").innerText="Register";
+}
 function toggle(id){
  let f=document.getElementById(id);
  f.type=f.type==="password"?"text":"password";
