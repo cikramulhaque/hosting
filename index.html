@@ -43,7 +43,7 @@ input{
 
 <h1>Bottle Rewards Portal</h1>
 
-<!-- SWITCH TABS -->
+<!-- SWITCH BUTTONS -->
 <button class="tabBtn" onclick="showCustomer()">Customer Login</button>
 <button class="tabBtn" onclick="showStore()">Store Login</button>
 
@@ -61,7 +61,7 @@ input{
 
   <input id="email" placeholder="Store Email">
 
-  <!-- Password + Eye Button -->
+  <!-- PASSWORD + EYE -->
   <div style="display:flex;align-items:center;justify-content:center;gap:6px;">
     <input id="pass" type="password" placeholder="Password" style="width:75%;">
     <button type="button" onclick="togglePass()" style="padding:8px;border-radius:8px;">
@@ -74,17 +74,30 @@ input{
 </div>
 
 
+
 <script type="module">
 
+/* ---------------- FIREBASE IMPORTS ---------------- */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithEmailAndPassword } 
-from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { 
+  getAuth, 
+  GoogleAuthProvider, 
+  signInWithPopup, 
+  signInWithEmailAndPassword 
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
+
+/* ---------------- YOUR REAL FIREBASE CONFIG ---------------- */
 const firebaseConfig = {
-  apiKey: "YOUR_KEY",
-  authDomain: "YOUR_PROJECT.firebaseapp.com",
-  projectId: "YOUR_PROJECT"
+  apiKey: "AIzaSyA7Tck7VFnldXnKj9fMpPc9bSWqgVQA8jU",
+  authDomain: "bottlereward.firebaseapp.com",
+  projectId: "bottlereward",
+  storageBucket: "bottlereward.firebasestorage.app",
+  messagingSenderId: "842823471278",
+  appId: "1:842823471278:web:a7bbbb0291e581dcc71d3f"
 };
+/* -------------------------------------------------- */
+
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth();
@@ -92,7 +105,8 @@ const auth = getAuth();
 const cmsg = document.getElementById("cmsg");
 const smsg = document.getElementById("smsg");
 
-// SWITCH FUNCTIONS
+
+/* Switch Tabs */
 window.showCustomer = function(){
   document.getElementById("customerBox").style.display="block";
   document.getElementById("storeBox").style.display="none";
@@ -103,27 +117,25 @@ window.showStore = function(){
   document.getElementById("storeBox").style.display="block";
 }
 
-// TOGGLE PASSWORD EYE BUTTON
+/* Toggle Password Eye */
 window.togglePass = function(){
   const p = document.getElementById("pass");
   p.type = (p.type === "password") ? "text" : "password";
 }
 
-// CUSTOMER LOGIN (Google)
+/* CUSTOMER LOGIN */
 document.getElementById("customerLogin").onclick = async ()=>{
   try{
     const provider = new GoogleAuthProvider();
     await signInWithPopup(auth, provider);
     cmsg.innerHTML = "Login Success ✔ Redirecting...";
-    
-    // redirect user to transfer page
-    window.location.href = "transfer.html"; 
+    window.location.href = "transfer.html";
   }catch(e){
-    cmsg.innerHTML = e.message;
+    cmsg.innerHTML = "Firebase: " + e.message;
   }
 }
 
-// STORE LOGIN
+/* STORE LOGIN */
 window.storeLogin = async function(){
   let email = document.getElementById("email").value;
   let pass = document.getElementById("pass").value;
@@ -131,11 +143,9 @@ window.storeLogin = async function(){
   try{
     await signInWithEmailAndPassword(auth,email,pass);
     smsg.innerHTML = "Login Success ✔ Redirecting...";
-    
-    // redirect store to store dashboard
     window.location.href = "store.html";
   }catch(e){
-    smsg.innerHTML = e.message;
+    smsg.innerHTML = "Firebase: " + e.message;
   }
 }
 
