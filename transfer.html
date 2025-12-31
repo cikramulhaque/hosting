@@ -36,7 +36,14 @@ button{width:100%;padding:10px;margin-top:10px;border-radius:5px;border:none;bac
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { getFirestore, doc, getDoc, updateDoc, setDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { 
+  getFirestore, 
+  doc, 
+  getDoc, 
+  updateDoc, 
+  setDoc, 
+  arrayUnion 
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyA7Tck7VFnldXnKj9fMpPc9bSWqgVQA8jU",
@@ -54,7 +61,6 @@ const db = getFirestore();
 const msg=document.getElementById("msg");
 let userEmail="";
 let userDocRef;
-let userData={};
 
 onAuthStateChanged(auth, async (user)=>{
  if(!user) location="index.html";
@@ -62,24 +68,28 @@ onAuthStateChanged(auth, async (user)=>{
  document.getElementById("email").innerText=userEmail;
 
  userDocRef = doc(db,"users",userEmail);
- let snap=await getDoc(userDocRef);
-
- if(snap.exists()){
-   userData=snap.data();
-   document.getElementById("points").innerText=userData.points||0;
-   document.getElementById("bottles").innerText=userData.bottles||0;
-   loadHistory();
- }
+ loadUser();
 });
 
-function loadHistory(){
+async function loadUser(){
+ let snap = await getDoc(userDocRef);
+ if(!snap.exists()) return;
+
+ let data = snap.data();
+ document.getElementById("points").innerText=data.points || 0;
+ document.getElementById("bottles").innerText=data.bottles || 0;
+
+ loadHistory(data);
+}
+
+function loadHistory(data){
  const box=document.getElementById("history");
  box.innerHTML="";
- if(!userData.history || userData.history.length==0){
+ if(!data.history || data.history.length==0){
   box.innerHTML="No transactions yet";
   return;
  }
- userData.history.slice().reverse().forEach(t=>{
+ data.history.slice().reverse().forEach(t=>{
   let d=document.createElement("div");
   d.className="historyBox";
   d.innerHTML=`Store: ${t.store}<br>Points: ${t.points}<br>Time: ${new Date(t.time).toLocaleString()}`;
@@ -89,6 +99,12 @@ function loadHistory(){
 
 window.sendPoints = async function(){
  msg.innerHTML="Processing...";
+
+ // always re-read latest firestore data (no trust)
+ let liveSnap = await getDoc(userDocRef);
+ let live = liveSnap.data();
+ let currentPoints = Number(live.points || 0);
+
  let pts = Number(document.getElementById("amount").value);
  let store = document.getElementById("storeId").value;
 
@@ -97,19 +113,19 @@ window.sendPoints = async function(){
    return;
  }
 
- if(!userData.points || userData.points <= 0){
+ if(currentPoints <= 0){
    msg.innerHTML="<span class='error'>You have 0 Points ❌</span>";
    return;
  }
 
- if(pts > userData.points){
+ if(pts > currentPoints){
    msg.innerHTML="<span class='error'>Insufficient Points ❌</span>";
    return;
  }
 
  await updateDoc(userDocRef,{
-   points:userData.points-pts,
-   history:arrayUnion({store:store,points:pts,time:new Date()})
+   points: currentPoints - pts,
+   history: arrayUnion({store:store,points:pts,time:new Date()})
  });
 
  const storeRef=doc(db,"stores",store);
@@ -121,7 +137,7 @@ window.sendPoints = async function(){
  });
 
  msg.innerHTML="<span class='success'>Points Sent Successfully ✔</span>";
- location.reload();
+ loadUser();  // refresh UI without reload
 }
 </script>
 </body>
